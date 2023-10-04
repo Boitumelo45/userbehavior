@@ -121,7 +121,7 @@ $ uvicorn app.main:router --host 'localhost' --port 8000
 check to see if the endpoints respond
 
 ```bash
-curl -X 'http://localhost:8000/' -H 'accept: json/application'
+curl -X GET 'http://localhost:8000/' -H 'accept: json/application'
 ```
 
 response:
@@ -133,7 +133,7 @@ response:
 ```
 
 ```bash
-curl -X 'http://localhost:8000/daily_expenses' -H 'accept: json/application'
+curl -X GET 'http://localhost:8000/daily_expenses' -H 'accept: json/application'
 ```
 
 response:
