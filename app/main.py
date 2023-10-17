@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Path, Query
-from typing import Optional
-
+from fastapi import FastAPI
 from .routers.analytics import analytics_router
 
-router = APIRouter()
+router = FastAPI()
 
 
 @router.get('/', tags=['Welcome page'])
