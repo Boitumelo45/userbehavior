@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .routers.analytics import analytics_router
+from .api.v1.routers.analytics import analytics_router
 
 router = FastAPI()
 
