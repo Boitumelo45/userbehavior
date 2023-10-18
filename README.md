@@ -16,7 +16,6 @@ Project structure:
 │   └── train.py
 ├── app
 │   ├── __init__.py
-│   ├── __pycache__
 │   ├── api
 │   ├── core
 │   ├── crud
@@ -28,7 +27,6 @@ Project structure:
 │   ├── templates
 │   └── test_main.py
 ├── behavior
-│   ├── __pycache__
 │   ├── config.py
 │   └── main.py
 ├── data
@@ -266,6 +264,26 @@ def load_csv_to_duckdb():
 This is a simplified example to get you started. In practice, you'll need to handle various details like error checking, logging, Airflow authentication, handling database schema changes, and more.
 
 Remember to adjust configurations and paths as per your actual environment.
+
+
+# Unit Testing
+
+```bash
+├── tests
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   └── v1
+│   │       ├── __init__.py
+│   │       └── routers
+│   │           ├── __init__.py
+│   │           ├── test_analytics.py
+│   │           ├── test_create_categories.py
+│   │           └── test_data_loader.py
+│   ├── test_db.py
+│   ├── test_models.py
+│   └── test_schemas.py
+```
 
 ## References
 
