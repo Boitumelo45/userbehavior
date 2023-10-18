@@ -1,6 +1,7 @@
 version: '3'
 
 services:
+
   user-behavior:
     build:
       context: .
@@ -9,6 +10,8 @@ services:
       - "8000:5001"
     volumes:
       - ./data:/app/data  # Adjust the paths as necessary
+    env_file:
+      - .env
     networks:
       - stackcards
 
@@ -25,6 +28,8 @@ services:
     command: webserver
     ports:
       - 8080:8080
+    env_file:
+      - .env
     networks:
       - stackcards
   
@@ -38,45 +43,59 @@ services:
       - ./airflow_dags/dags:/usr/local/airflow/dags
       - ./airflow_dags/logs:/usr/local/airflow/logs
     command: scheduler
+    env_file:
+      - .env
     networks:
       - stackcards
 
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
-      container_name: elasticsearch
-      environment:
-        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-        - "ELASTIC_PASSWORD=${ELASTIC_PASSWORD}"
-        - "discovery.type=single-node"
-      ports:
-        - "9200:9200"
-        - "9300:9300"
-      volumes:
-        - esdata:/usr/share/elasticsearch/data
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    container_name: elasticsearch
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    env_file:
+      - .env
+    networks:
+    - stackcards
 
-    fluentd:
-      image: fluent/fluentd:latest
-      container_name: fluentd
-      depends_on:
-        - elasticsearch
-      ports:
-        - "24224:24224"
-        - "24224:24224/udp"
-      volumes:
-        - ./fluentd/conf:/fluentd/etc
-      environment:
-        - "FLUENTD_CONF=fluent.conf"
+  fluentd:
+    image: fluent/fluentd:v1.14
+    container_name: fluentd
+    depends_on:
+      - elasticsearch
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentd/conf:/fluentd/etc
+    environment:
+      - "FLUENTD_CONF=fluent.conf"
+    env_file:
+      - .env
+    networks:
+    - stackcards
 
-    kibana:
-      image: docker.elastic.co/kibana/kibana:7.10.0
-      container_name: kibana
-      depends_on:
-        - elasticsearch
-      ports:
-        - "5601:5601"
-      environment:
-        - "ELASTICSEARCH_URL=${ELASTICSEARCH_URL}"
-        - "ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.0
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_URL=$ELASTICSEARCH_URL
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+    env_file:
+      - .env
+    networks:
+      - stackcards
 
 volumes:
   esdata:
