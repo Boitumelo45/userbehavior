@@ -1,15 +1,35 @@
 from fastapi import FastAPI
-from .api.v1.routers.analytics import analytics_router
+from fastapi.middleware.cors import CORSMiddleware
+import starlette_context
+from starlette.middleware import Middleware
+from starlette_context import plugins
+from starlette_context.middleware import ContextMiddleware
 
-router = FastAPI()
+# import routers
+#from app.api.v1.routers.analytics import analytics_router
+from app.api.api import router as api_router_v1
+
+app = FastAPI()
 
 
-@router.get('/', tags=['Welcome page'])
+# Global context middleware configuration
+middleware = [
+    Middleware(
+        ContextMiddleware,
+        plugins=(
+            plugins.RequestIdPlugin(),
+            plugins.CorrelationIdPlugin()
+        )
+    )
+]
+
+
+@app.get('/', tags=['Welcome page'])
 async def index():
     """Welcome page"""
     return {
         "User bahavior": "Analysis"
     }
 
-# include routers
-router.include_router(analytics_router)
+# Include top-level routers
+app.include_router(api_router_v1, prefix="/v1")

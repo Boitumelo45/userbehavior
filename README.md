@@ -2,16 +2,23 @@
 
 ## How to run the project
 
-
 ```bash
 Project structure:
-
+.
 ├── README.md
 ├── app
 │   ├── __init__.py
+│   ├── api
+│   ├── core
+│   ├── crud
+│   ├── db
 │   ├── main.py
-│   ├── routers
+│   ├── models
+│   ├── schemas
+│   ├── static
+│   ├── templates
 │   └── test_main.py
+├── app.db
 ├── behavior
 │   ├── config.py
 │   └── main.py
@@ -24,7 +31,6 @@ Project structure:
 ├── logging.conf
 ├── requirements.txt
 └── venv
-└── .env
 ```
 
 ###  [1] create a virtual environment
@@ -107,170 +113,6 @@ Run the project using docker
 docker-compose up --build
 ```
 
-### [5] View analytics results/visualisations
-
-First run the project to run computational endpoints.
-open a terminal window and run this code
-
-```bash
-$ source venv\bin\active # linux/unix
-$ venv/scripts/activate # windows
-$ cd project/
-$ uvicorn app.main:router --host 'localhost' --port 8000 
-```
-check to see if the endpoints respond
-
-```bash
-curl -X GET 'http://localhost:8000/' -H 'accept: json/application'
-```
-
-response:
-
-```json
-{
-    "User bahavior": "Analysis"
-}
-```
-
-```bash
-curl -X GET 'http://localhost:8000/daily_expenses' -H 'accept: json/application'
-```
-
-response:
-
-```json
-{
-    "2023/05/02": 2222,
-    "2023/05/03": 2914.35,
-    "2023/05/04": 2154.95,
-    "2023/05/05": 164,
-    "2023/05/06": 1255.84,
-    "2023/05/08": 4964.34,
-    "2023/05/09": 710,
-    "2023/05/10": 5155.73,
-    ...
-}
-```
-
-open another terminal
-
-```bash
-$ source venv/bin/activate # linux
-$ venv\scripts\activate # windows
-$ pip install -r requirements.txt
-$ cd app
-$ streamlit run behavior/main.py
-```
-
-Open a browser to check if the response is as visualised
-
-http://localhost:8501/
-
-![](data/images/daily_expenses.png)
-
-
-# Code documentation
-
-```bash
-    app/
-        main.py
-```
-This module serves as the entry point for routing in the application. It defines a root endpoint and incorporates additional routing configurations from analytics_router.
-
-```python
-from fastapi import APIRouter, Path, Query
-from typing import Optional
-
-from .routers.analytics import analytics_router
-
-router = APIRouter()
-
-@router.get('/', tags=['Welcome page'])
-async def index():
-    """Welcome page"""
-    return {
-        "User bahavior": "Analysis"
-    }
-
-# include routers
-router.include_router(analytics_router)
-```
-
-Under 
-```bash
-app
-   |__routers/
-        |___analytics.py
-```
-
-expand on the incomplete endpoints:
-
-- weekly_expenses
-- monthly_expenses
-- category_expenses
-- predictive_model [optional]
-
-```python
-@analytics_router.get('/data')
-async def read_statement():
-    """Read CSV file statement and return data as dataframe"""
-    df = process_statement() # read a csv file and get dataframe
-    res = df.to_json(orient="records")
-    parsed = json.loads(res)
-
-    return parsed
-
-
-@analytics_router.get('/daily_expenses')
-async def daily_expenses():
-    """Return daily expenses tabulated data"""
-    res = await read_statement()
-    total_expenses = total_daily_expenses(res)
-    
-    return total_expenses
-
-
-@analytics_router.get('/weekly_expenses')
-async def weekly_expenses():
-    """Return weekly expenses tabulated data"""
-    pass
-
-
-@analytics_router.get('/monthly_expenses')
-async def monthly_expenses():
-    """Return monthly expenses tabulated data"""
-    pass
-
-
-@analytics_router.get('/category_expenses')
-async def expenses_per_category():
-    """Return expenses per category, monthly"""
-    pass
-
-
-# machine learning model - optional
-#X, y = get_features_and_target()
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
-#model = LinearRegression()
-#model.fit(X_train, y_train)
-
-@analytics_router.post('/predictive_model')
-async def predictive_behavior(features: list):
-    """
-    Receive a list of features, make a prediction using a trained model, 
-    and return the prediction.
-    """
-    try:
-        features_array = np.array(features).reshape(1, -1)
-        prediction = model.predict(features_array)
-        return {"prediction": prediction.tolist()}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-```
-
-Data is processed under data_loader.py module for the predictive model using joblib [Optional]
-
 
 # Guideline
 Given a user's expenses statement under data/statement.csv create a program that will analyse the user's behavior. 
@@ -324,77 +166,10 @@ Vehicle and Transportation | 0           |                      |             |
 [3] Compute variance
 [4] Compute total number of transactions
 
-
-# Unittesting
-
-Under app/router
-```bash
-    app/
-    |___routers/
-        |___analytics.py
-```
-
-How you can write unittests against your code
-
-```python
-from pytest import mark
-
-@mark.parametrize('input_data, output_data', [(i, f"{str(i)[:4]}/{str(i)[4:6]}/{str(i)[6:]}") for i in [20230511 + j for j in range(10)]])
-def test_transform_date(input_data, output_data):
-    assert transform_date(input_data) == output_data
-
-def transform_date(input_date):
-    # Convert the input to string in case it's an integer
-    date_str = str(input_date)
-    
-    # Convert string to datetime object
-    date_obj = datetime.strptime(date_str, '%Y%m%d')
-    
-    # Format datetime object to desired format
-    formatted_date = date_obj.strftime('%Y/%m/%d')
-    return formatted_date
-```
-
-in your command line
-
-```bash
-pytest -v app/routers/analytics.py
-```
-
-```bash
-=================================================================================== 10 passed in 0.91s ====================================================================================
-(venv)> pytest -v app/routers/analytics.py
-=================================================================================== test session starts ===================================================================================
-platform win32 -- Python 3.7.9, pytest-7.4.2, pluggy-1.2.0 -- e:\business\stackcards\user behavior\venv\scripts\python.exe
-cachedir: .pytest_cache
-rootdir: E:\Business\StackCards\user behavior
-plugins: anyio-3.7.1
-collected 10 items
-
-app/routers/analytics.py::test_transform_date[20230511-2023/05/11] PASSED                                                                                                            [ 10%]
-app/routers/analytics.py::test_transform_date[20230512-2023/05/12] PASSED                                                                                                            [ 20%]
-app/routers/analytics.py::test_transform_date[20230513-2023/05/13] PASSED                                                                                                            [ 30%]
-app/routers/analytics.py::test_transform_date[20230514-2023/05/14] PASSED                                                                                                            [ 40%]
-app/routers/analytics.py::test_transform_date[20230515-2023/05/15] PASSED                                                                                                            [ 50%]
-app/routers/analytics.py::test_transform_date[20230516-2023/05/16] PASSED                                                                                                            [ 60%]
-app/routers/analytics.py::test_transform_date[20230517-2023/05/17] PASSED                                                                                                            [ 70%]
-app/routers/analytics.py::test_transform_date[20230518-2023/05/18] PASSED                                                                                                            [ 80%]
-app/routers/analytics.py::test_transform_date[20230519-2023/05/19] PASSED                                                                                                            [ 90%]
-app/routers/analytics.py::test_transform_date[20230520-2023/05/20] PASSED                                                                                                            [100%]
-
-=================================================================================== 10 passed in 0.75s ====================================================================================
-```
-
 ## References
 
 [1] https://streamlit.io/
 [2] https://plotly.com/python/plotly-express/
 [3] https://pytorch.org/
 [4] https://vaex.io/docs/index.html
-
-
-# How to submit your code
-
-[1] Clone the project
-[2] submit a zip file
-
+[5] https://pypi.org/project/apache-airflow/#description

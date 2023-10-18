@@ -1,16 +1,25 @@
 import os
 import math
 import json
+import requests
 import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, Path, Query, HTTPException
+from fastapi import APIRouter, Path, Query, HTTPException, Depends
 from typing import Optional
 
-# data analytics
-import pandas as pd
+# create categories
+from .create_categories import (
+    remove_date_from_description, 
+    group_by_date_period,
+    group_by_first_word,
+    generate_categories,
+    transform_date,
+    process_statement,
+    total_daily_expenses
+    ) 
 
-# unittesting
-from pytest import mark
+# schemas
+from app.schemas.categories import Frequency
 
 # compute
 from collections import defaultdict
@@ -21,60 +30,7 @@ from sklearn import metrics
 # data processing (machine learning -predictive modeling optional)
 from .data_loader import get_features_and_target
 
-
 analytics_router = APIRouter()
-
-@mark.parametrize('input_data, output_data', [(i, f"{str(i)[:4]}/{str(i)[4:6]}/{str(i)[6:]}") for i in [20230511 + j for j in range(10)]])
-def test_transform_date(input_data, output_data):
-    assert transform_date(input_data) == output_data
-
-
-def transform_date(input_date):
-    # Convert the input to string in case it's an integer
-    date_str = str(input_date)
-    
-    # Convert string to datetime object
-    date_obj = datetime.strptime(date_str, '%Y%m%d')
-    
-    # Format datetime object to desired format
-    formatted_date = date_obj.strftime('%Y/%m/%d')
-    return formatted_date
-
-
-def process_statement(statement: str=os.path.join('data', 'statement.csv')) -> pd.DataFrame:
-    """Process csv and return a dataframe"""
-    df = pd.read_csv(statement)
-    df = df.fillna(0) # replace all NaNs with 0
-    
-    # get dataframe columns
-    columns = list(df.columns)
-    date_column = df[columns[0]].to_list()
-    format_date_column = list(map(transform_date, date_column))
-    df[columns[0]] = format_date_column
-
-    return df
-
-
-def total_daily_expenses(bank_statement: list) -> pd.DataFrame:
-    """payload and return summed daily expenses"""
-    daily_expenses = defaultdict(list)
-
-    for item in bank_statement:
-        if item['STATUS'] == 'OPEN' or item['STATUS'] == 'CLOSE':
-            pass
-        else:
-            if item['AMOUNT'] > 0: # positive cash flow
-                pass
-            else:
-                daily_expenses[item['DATE (YYYY/MM/DD)']].append((item['AMOUNT']))
-    
-    def _sum(data:dict)->dict:
-        expenses = {}
-        for date, amounts in data.items():
-            expenses[date] = round(abs(sum(amounts)), 3)
-        return expenses
-
-    return _sum(data=daily_expenses)
 
 
 @analytics_router.get('/data')
@@ -108,10 +64,60 @@ async def monthly_expenses():
     pass
 
 
+@analytics_router.get('/group_transactions_by_date')
+async def group_transactions():
+    data = await read_statement()
+    
+    data = data['data'][1:-1] # remove opening statement and closing statement bank activity status
+
+    grouped_data = defaultdict(list)
+
+    for item in data:
+        date = item.pop('DATE (YYYY/MM/DD)', None)  # Remove the date key and retrieve its value
+
+        expense_desc = item.get('EXPENSE DESCRIPTION', None)
+        if expense_desc:
+            item['EXPENSE DESCRIPTION'] = expense_desc.lower()
+
+        if date:  # Just to ensure there's a date
+            grouped_data[date].append(item)
+    
+    grouped_data = remove_date_from_description(data_dict=grouped_data)
+
+    return grouped_data
+
+
 @analytics_router.get('/category_expenses')
-async def expenses_per_category():
-    """Return expenses per category, monthly"""
-    pass
+async def expenses_per_category(timeframe: Frequency = Depends()):
+    """Return expenses per category
+    1. daily
+    2. weekly
+    3. monthly
+    """
+    data = await group_transactions()
+
+    if timeframe.timeframe == 'daily':
+        result = {}
+        for _date, _data in data.items():
+            grouped_data = group_by_first_word(data={_date: _data})
+            result[_date] = grouped_data
+        return result
+
+    elif timeframe.timeframe == 'weekly':
+        weekly_data = group_by_date_period(data, "weekly")
+        result = {}
+        for _date, _data in weekly_data.items():
+            grouped_data = group_by_first_word(data={_date: _data})
+            result[_date] = grouped_data
+        return result
+
+    elif timeframe.timeframe == 'monthly':
+        monthly_data = group_by_date_period(data, "monthly")
+        result = {}
+        for _date, _data in monthly_data.items():
+            grouped_data = group_by_first_word(data={_date: _data})
+            result[_date] = grouped_data
+        return result
 
 
 # machine learning model - optional

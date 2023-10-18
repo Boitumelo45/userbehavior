@@ -1,32 +1,36 @@
+import os
 import re
-import requests
-from pydantic import BaseModel
+import pandas as pd
 from typing import Union
 from difflib import SequenceMatcher
-from typing_extensions import Literal
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Depends
 from collections import defaultdict
 
 
-app = FastAPI()
-
-class Frequency(BaseModel):
-    timeframe: Literal['daily', 'weekly', 'monthly'] = 'daily'
-
-
-@app.get("/fetch-data/")
-async def fetch_data():
-    # The endpoint in our FastAPI app that fetches data from the other server
-    # Define the URL of the other server
-    url = "http://localhost:8000/data"
-
-    # Use requests to make a GET request to the other server
-    response = requests.get(url)
+def transform_date(input_date):
+    # Convert the input to string in case it's an integer
+    date_str = str(input_date)
     
-    # Return the data fetched from the other server (assuming it returns JSON)
-    return response.json()
+    # Convert string to datetime object
+    date_obj = datetime.strptime(date_str, '%Y%m%d')
+    
+    # Format datetime object to desired format
+    formatted_date = date_obj.strftime('%Y/%m/%d')
+    return formatted_date
 
+
+def process_statement(statement: str=os.path.join('data', 'statement.csv')) -> pd.DataFrame:
+    """Process csv and return a dataframe"""
+    df = pd.read_csv(statement)
+    df = df.fillna(0) # replace all NaNs with 0
+    
+    # get dataframe columns
+    columns = list(df.columns)
+    date_column = df[columns[0]].to_list()
+    format_date_column = list(map(transform_date, date_column))
+    df[columns[0]] = format_date_column
+
+    return df
 
 
 def remove_date_from_description(data_dict: defaultdict) -> defaultdict:
@@ -48,6 +52,27 @@ def similar(a, b):
     """Return the similarity ratio of two strings."""
     return SequenceMatcher(None, a, b).ratio()
 
+
+def total_daily_expenses(bank_statement: list) -> pd.DataFrame:
+    """payload and return summed daily expenses"""
+    daily_expenses = defaultdict(list)
+
+    for item in bank_statement:
+        if item['STATUS'] == 'OPEN' or item['STATUS'] == 'CLOSE':
+            pass
+        else:
+            if item['AMOUNT'] > 0: # positive cash flow
+                pass
+            else:
+                daily_expenses[item['DATE (YYYY/MM/DD)']].append((item['AMOUNT']))
+    
+    def _sum(data:dict)->dict:
+        expenses = {}
+        for date, amounts in data.items():
+            expenses[date] = round(abs(sum(amounts)), 3)
+        return expenses
+
+    return _sum(data=daily_expenses)
 
 def generate_categories(transactions_data):
     # Tokenize descriptions
@@ -123,27 +148,6 @@ def group_by_first_word(data: Union[defaultdict, list]):
     return dict(final_groups)
 
 
-@app.get('/group_transactions_by_date')
-async def group_transactions():
-    data = await fetch_data() # get data
-    data = data['data'][1:-1] # remove opening statement and closing statement bank activity status
-
-    grouped_data = defaultdict(list)
-    for item in data:
-        date = item.pop('DATE (YYYY/MM/DD)', None)  # Remove the date key and retrieve its value
-
-        expense_desc = item.get('EXPENSE DESCRIPTION', None)
-        if expense_desc:
-            item['EXPENSE DESCRIPTION'] = expense_desc.lower()
-
-        if date:  # Just to ensure there's a date
-            grouped_data[date].append(item)
-    
-    grouped_data = remove_date_from_description(data_dict=grouped_data)
-
-    return grouped_data
-
-
 def group_by_date_period(data: defaultdict, period: str = "daily") -> defaultdict:
     """Group transactions data by the specified date period."""
     if period not in ["daily", "weekly", "monthly"]:
@@ -167,36 +171,3 @@ def group_by_date_period(data: defaultdict, period: str = "daily") -> defaultdic
         result[date_key].extend(transactions)
 
     return result
-
-
-@app.get('/categorical_by')
-async def categorical_by(timeframe: Frequency = Depends()):
-    """Category by frequency:
-        1. daily
-        2. weekly
-        3. monthly
-    """
-    data = await group_transactions()
-
-    if timeframe.timeframe == 'daily':
-        result = {}
-        for _date, _data in data.items():
-            grouped_data = group_by_first_word(data={_date: _data})
-            result[_date] = grouped_data
-        return result
-
-    elif timeframe.timeframe == 'weekly':
-        weekly_data = group_by_date_period(data, "weekly")
-        result = {}
-        for _date, _data in weekly_data.items():
-            grouped_data = group_by_first_word(data={_date: _data})
-            result[_date] = grouped_data
-        return result
-
-    elif timeframe.timeframe == 'monthly':
-        monthly_data = group_by_date_period(data, "monthly")
-        result = {}
-        for _date, _data in monthly_data.items():
-            grouped_data = group_by_first_word(data={_date: _data})
-            result[_date] = grouped_data
-        return result

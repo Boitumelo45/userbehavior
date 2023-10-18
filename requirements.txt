@@ -4,6 +4,7 @@ gunicorn
 pydantic-settings
 pydantic
 python-multipart
+starlette-context
 
 # formatting
 colorama
@@ -23,3 +24,9 @@ plotly-express
 
 # unittesting
 pytest
+
+# database
+duckdb
+
+# ETL
+apache-airflow
