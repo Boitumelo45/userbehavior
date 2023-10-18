@@ -33,6 +33,19 @@ Project structure:
 └── venv
 ```
 
+# Create a predictive model
+
+```bash
+├── app/
+├── analytics
+│   ├── __init__.py
+│   ├── preprocessing.py
+│   ├── train.py
+│   ├── predict.py
+│   └── model.pkl
+```
+
+
 ###  [1] create a virtual environment
 ```bash
 python3 -m venv venv
