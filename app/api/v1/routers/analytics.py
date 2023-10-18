@@ -4,6 +4,7 @@ import json
 import requests
 import numpy as np
 from datetime import datetime
+from collections import defaultdict
 from fastapi import APIRouter, Path, Query, HTTPException, Depends
 from typing import Optional
 
@@ -18,17 +19,9 @@ from .create_categories import (
     total_daily_expenses
     ) 
 
+
 # schemas
 from app.schemas.categories import Frequency
-
-# compute
-from collections import defaultdict
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn import metrics
-
-# data processing (machine learning -predictive modeling optional)
-from .data_loader import get_features_and_target
 
 analytics_router = APIRouter()
 
@@ -118,24 +111,3 @@ async def expenses_per_category(timeframe: Frequency = Depends()):
             grouped_data = group_by_first_word(data={_date: _data})
             result[_date] = grouped_data
         return result
-
-
-# machine learning model - optional
-#X, y = get_features_and_target()
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
-#model = LinearRegression()
-#model.fit(X_train, y_train)
-
-@analytics_router.post('/predictive_model')
-async def predictive_behavior(features: list):
-    """
-    Receive a list of features, make a prediction using a trained model, 
-    and return the prediction.
-    """
-    try:
-        features_array = np.array(features).reshape(1, -1)
-        prediction = model.predict(features_array)
-        return {"prediction": prediction.tolist()}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))

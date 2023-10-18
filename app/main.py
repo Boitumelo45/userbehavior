@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import starlette_context
 from starlette.middleware import Middleware
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
