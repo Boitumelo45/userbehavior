@@ -285,6 +285,16 @@ Remember to adjust configurations and paths as per your actual environment.
 │   └── test_schemas.py
 ```
 
+# EFK 
+
+```bash
+├── docker
+│   ├── Dockerfile
+│   ├── fluentd
+│   │   └── conf
+│   │       └── fluent.conf
+```
+
 ## References
 
 [1] https://streamlit.io/

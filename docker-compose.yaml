@@ -41,6 +41,47 @@ services:
     networks:
       - stackcards
 
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+      container_name: elasticsearch
+      environment:
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - "ELASTIC_PASSWORD=${ELASTIC_PASSWORD}"
+        - "discovery.type=single-node"
+      ports:
+        - "9200:9200"
+        - "9300:9300"
+      volumes:
+        - esdata:/usr/share/elasticsearch/data
+
+    fluentd:
+      image: fluent/fluentd:latest
+      container_name: fluentd
+      depends_on:
+        - elasticsearch
+      ports:
+        - "24224:24224"
+        - "24224:24224/udp"
+      volumes:
+        - ./fluentd/conf:/fluentd/etc
+      environment:
+        - "FLUENTD_CONF=fluent.conf"
+
+    kibana:
+      image: docker.elastic.co/kibana/kibana:7.10.0
+      container_name: kibana
+      depends_on:
+        - elasticsearch
+      ports:
+        - "5601:5601"
+      environment:
+        - "ELASTICSEARCH_URL=${ELASTICSEARCH_URL}"
+        - "ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}"
+
+volumes:
+  esdata:
+    driver: local
+
 networks:
   stackcards:
     driver: bridge
