@@ -6,8 +6,17 @@
 Project structure:
 .
 ├── README.md
+├── airflow_dags
+│   └── dags
+├── analytics
+│   ├── __init__.py
+│   ├── model.pkl
+│   ├── predict.py
+│   ├── preprocessing.py
+│   └── train.py
 ├── app
 │   ├── __init__.py
+│   ├── __pycache__
 │   ├── api
 │   ├── core
 │   ├── crud
@@ -18,8 +27,8 @@ Project structure:
 │   ├── static
 │   ├── templates
 │   └── test_main.py
-├── app.db
 ├── behavior
+│   ├── __pycache__
 │   ├── config.py
 │   └── main.py
 ├── data
