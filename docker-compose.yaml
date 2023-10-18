@@ -12,6 +12,35 @@ services:
     networks:
       - stackcards
 
+  airflow-webserver:
+    image: apache/airflow:2.2.0  # You can specify the version you prefer
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=$AIRFLOW__CORE__EXECUTOR
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=$AIRFLOW__CORE__SQL_ALCHEMY_CONN
+      - AIRFLOW__CORE__LOAD_EXAMPLES=$AIRFLOW__CORE__LOAD_EXAMPLES
+      - AIRFLOW__CORE__DAGS_FOLDER=$AIRFLOW__CORE__DAGS_FOLDER
+    volumes:
+      - ./airflow_dags/dags:/usr/local/airflow/dags
+      - ./airflow_dags/logs:/usr/local/airflow/logs
+    command: webserver
+    ports:
+      - 8080:8080
+    networks:
+      - stackcards
+  
+  airflow-scheduler:
+    image: apache/airflow:2.2.0
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=$AIRFLOW__CORE__EXECUTOR
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=$AIRFLOW__CORE__SQL_ALCHEMY_CONN
+      - AIRFLOW__CORE__LOAD_EXAMPLES=$AIRFLOW__CORE__LOAD_EXAMPLES
+    volumes:
+      - ./airflow_dags/dags:/usr/local/airflow/dags
+      - ./airflow_dags/logs:/usr/local/airflow/logs
+    command: scheduler
+    networks:
+      - stackcards
+
 networks:
   stackcards:
     driver: bridge

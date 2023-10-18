@@ -1,8 +1,9 @@
-# app/db/database.py
+
+import os
 import duckdb
 
 # Create a connection to the database
-conn = duckdb.connect('app.db')
+conn = duckdb.connect(os.path.join('app', 'db', 'app.db'))
 
 def init_db():
     """Initialize the database and create the tables"""
@@ -23,6 +24,4 @@ def insert_csv_data(csv_path:str):
     conn.execute(query)
     conn.commit()
 
-# It's a good practice to close the connection when it's no longer needed.
-# However, you can keep it open as long as your application is running.
 # conn.close()

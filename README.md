@@ -179,6 +179,85 @@ Vehicle and Transportation | 0           |                      |             |
 [3] Compute variance
 [4] Compute total number of transactions
 
+# ETL - apache-airflow
+
+Using Apache Airflow with FastAPI to load a CSV file into a DuckDB database:
+
+```bash
+├── app
+│   ├── api
+│   │   ├── v1
+│   │   │   └── routers
+│   │   │       └── airflow_trigger.py  # This file contains the FastAPI endpoint to trigger the 
+├── airflow_dags
+│   ├── dags
+│   │   └── load_csv_to_duckdb.py
+```
+
+1. **Setup Apache Airflow**:
+   - If you haven't already, install Apache Airflow and initialize its database.
+   - Start the web server and scheduler.
+
+2. **Define a Custom Airflow Operator for Loading Data**:
+   - Create a custom operator (or use PythonOperator) that:
+     - Reads the CSV file.
+     - Loads the CSV data into the DuckDB database.
+   - This custom operator can use Python's standard libraries or other libraries like `pandas` for reading CSV and interfacing with DuckDB.
+
+3. **Create an Airflow DAG**:
+   - Define a DAG in Airflow that uses the custom operator.
+   - Schedule the DAG to run at your desired frequency.
+
+4. **Integrate FastAPI with Airflow**:
+   - In FastAPI, you can create an endpoint that triggers the Airflow DAG using Airflow's REST API or CLI.
+   - This way, you can initiate the CSV loading process via an API call to your FastAPI service.
+
+Here's a basic outline of what the integration might look like:
+
+**Airflow - Load CSV to DuckDB Operator**:
+```python
+from airflow.models import BaseOperator
+from airflow.utils.decorators import apply_defaults
+import duckdb
+import pandas as pd
+
+class LoadCSVToDuckDBOperator(BaseOperator):
+
+    @apply_defaults
+    def __init__(self, csv_path, db_path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.csv_path = csv_path
+        self.db_path = db_path
+
+    def execute(self, context):
+        data = pd.read_csv(self.csv_path)
+        
+        con = duckdb.connect(self.db_path)
+        con.register('df', data)
+        con.execute("CREATE TABLE my_table AS SELECT * FROM df")
+        con.close()
+```
+
+**FastAPI Endpoint to Trigger Airflow DAG**:
+```python
+from fastapi import FastAPI
+import requests
+
+app = FastAPI()
+
+AIRFLOW_API_ENDPOINT = "http://AIRFLOW_HOST:PORT/api/v1/dags/YOUR_DAG_ID/dagRuns"
+
+@app.post("/load_csv_to_duckdb/")
+def load_csv_to_duckdb():
+    # Trigger the Airflow DAG (assuming you've set up authentication for Airflow's REST API)
+    response = requests.post(AIRFLOW_API_ENDPOINT, json={"conf":{}})
+    return {"status": response.status_code, "message": response.text}
+```
+
+This is a simplified example to get you started. In practice, you'll need to handle various details like error checking, logging, Airflow authentication, handling database schema changes, and more.
+
+Remember to adjust configurations and paths as per your actual environment.
+
 ## References
 
 [1] https://streamlit.io/
